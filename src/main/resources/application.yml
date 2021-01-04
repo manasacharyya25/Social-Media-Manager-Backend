@@ -1,0 +1,10 @@
+spring:
+  jpa:
+    generate-ddl: true
+    hibernate:
+      ddl-auto: create
+      dialect: org.hibernate.dialect.PostgreSQL94Dialect
+  datasource:
+    url: "jdbc:postgresql://localhost:5431/Somedman"
+    username: postgres
+    password: Password
