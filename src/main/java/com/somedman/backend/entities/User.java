@@ -12,14 +12,16 @@ import javax.persistence.Table;
 
 @Entity
 @Table(name="users")
+@Builder
 public class    User {
     @Id
-    private int id;
-    private String username;
+    @GeneratedValue
+    public int id;
+    private String userName;
     private String email;           //Will change data type
     private String photoUrl;        // Will change data type to uri
     private String userId;          // Provided by Social platform. Same if logging in with email id.
-    private String subscription;    // Will change to enum
+    private String provider;
 }
 
 
