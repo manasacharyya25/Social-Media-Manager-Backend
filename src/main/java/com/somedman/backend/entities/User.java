@@ -12,11 +12,10 @@ import javax.persistence.Table;
 
 @Entity
 @Table(name="users")
-@Builder
-public class    User {
+@Data
+public class User {
     @Id
-    @GeneratedValue
-    public int id;
+    private int id;
     private String userName;
     private String email;           //Will change data type
     private String photoUrl;        // Will change data type to uri
