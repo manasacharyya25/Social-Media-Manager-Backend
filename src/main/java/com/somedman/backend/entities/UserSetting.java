@@ -9,11 +9,10 @@ import javax.persistence.Table;
 @Entity
 @Table(name="user_settings")
 @Data
-public class UserSettings
+public class UserSetting
 {
   @Id
   private int userId;
-  @Getter
   private boolean facebookIntegrated;
   private boolean instagramIntegrated;
   private boolean tumblrIntegrated;

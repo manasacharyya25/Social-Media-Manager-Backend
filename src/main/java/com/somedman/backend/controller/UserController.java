@@ -1,9 +1,7 @@
 package com.somedman.backend.controller;
 
 import com.somedman.backend.entities.User;
-import com.somedman.backend.entities.UserSettings;
-import com.somedman.backend.repository.UserRepository;
-import com.somedman.backend.repository.UserSettingsRepository;
+import com.somedman.backend.entities.UserSetting;
 import com.somedman.backend.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -25,13 +23,14 @@ public class UserController {
 
     @GetMapping("/settings/{userId}")
     @CrossOrigin(origins = "*")
-    public Optional<UserSettings> getUserSettings(@PathVariable("userId") int userId) {
+    public Optional<UserSetting> getUserSettings(@PathVariable("userId") int userId) {
         return this.userService.getUserSettings(userId);
     }
 
     @PostMapping("/settings")
     @CrossOrigin(origins="*")
-    public void setUserSettings(@RequestBody UserSettings userSettings) {
+    public void setUserSettings(@RequestBody
+        UserSetting userSettings) {
         this.userService.saveUserSettings(userSettings);
     }
 

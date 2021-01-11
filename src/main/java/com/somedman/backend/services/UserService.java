@@ -1,7 +1,7 @@
 package com.somedman.backend.services;
 
 import com.somedman.backend.entities.User;
-import com.somedman.backend.entities.UserSettings;
+import com.somedman.backend.entities.UserSetting;
 import com.somedman.backend.repository.UserRepository;
 import com.somedman.backend.repository.UserSettingsRepository;
 import com.somedman.backend.utills.CustomUtils;
@@ -27,21 +27,21 @@ public class UserService
       newUser.setId(userId);
       this.userRepository.save(newUser);
 
-      UserSettings userSettings = new UserSettings();
+      UserSetting userSettings = new UserSetting();
       userSettings.setUserId(userId);
       this.userSettingsRepository.save(userSettings);
     }
     return userId;
   }
 
-  public Optional<UserSettings> getUserSettings(int userId)
+  public Optional<UserSetting> getUserSettings(int userId)
   {
     return this.userSettingsRepository.findById(userId);
   }
 
-  public UserSettings saveUserSettings(UserSettings userSettings)
+  public UserSetting saveUserSettings(UserSetting userSettings)
   {
-    UserSettings updateUserSettings = this.userSettingsRepository.save(userSettings);
+    UserSetting updateUserSettings = this.userSettingsRepository.save(userSettings);
     return updateUserSettings;
   }
 }

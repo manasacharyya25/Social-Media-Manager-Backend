@@ -2,7 +2,7 @@ spring:
   jpa:
     generate-ddl: true
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
       dialect: org.hibernate.dialect.PostgreSQL94Dialect
   datasource:
     url: "jdbc:postgresql://localhost:5431/Somedman"
