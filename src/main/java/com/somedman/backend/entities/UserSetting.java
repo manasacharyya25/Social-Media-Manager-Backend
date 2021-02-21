@@ -19,5 +19,4 @@ public class UserSetting
   private boolean twitterIntegrated;
   private boolean redditIntegrated;
   private boolean linkedinIntegrated;
-
 }

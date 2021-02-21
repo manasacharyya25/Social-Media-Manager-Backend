@@ -12,14 +12,19 @@ import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
 import oauth.signpost.exception.OAuthNotAuthorizedException;
-import oauth.signpost.http.HttpRequest;
 import oauth.signpost.http.HttpResponse;
+import org.apache.http.HttpRequest;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.awt.*;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.io.InputStream;
+import java.net.*;
 import java.util.*;
 
 @RestController
@@ -47,7 +52,7 @@ public class SocialController
   }
 
   @GetMapping("/tumblr/initialize")
-  public void integrateTumblr() throws
+  public String integrateTumblr() throws
       OAuthCommunicationException,
       OAuthExpectationFailedException,
       OAuthNotAuthorizedException,
@@ -58,12 +63,14 @@ public class SocialController
     String oauthToken = authUrl.split("=")[1];
 
     cache.put(oauthToken, consumer);
+
+    return authUrl;
   }
 
   @GetMapping("/tumblr/authorize")
-  public void AuthorizeTumblr(@RequestParam(name = "oauth_token") String oauthToken,
+  public String AuthorizeTumblr(@RequestParam(name = "oauth_token") String oauthToken,
       @RequestParam (name = "oauth_verifier") String oauthVerifier)
-      throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException
+      throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException, IOException
   {
     OAuthConsumer consumer = cache.get(oauthToken);
 
@@ -84,19 +91,20 @@ public class SocialController
 
     // if not yet done, load the token and token secret for
     // the current user and set them
-    consumer.setTokenWithSecret(ACCESS_TOKEN, TOKEN_SECRET);
+    consumer.setTokenWithSecret(accessToken, accessTokenSecret);
 
     // create a request that requires authentication
-    URL url = new URL("http://twitter.com/statuses/mentions.xml");
-    HttpURLConnection request = (HttpURLConnection) url.openConnection();
 
-    // sign the request
-    consumer.sign(request);
+    //Creating a HttpClient object
+    CloseableHttpClient httpclient = HttpClients.createDefault();
 
-    // send the request
-    request.connect();
+    //Creating a HttpGet object
+    HttpGet httpget = new HttpGet("https://api.tumblr.com/v2/user/info");
 
-    // response status should be 200 OK
-    int statusCode = request.getResponseCode();
+    consumer.sign(httpget);
+
+    CloseableHttpResponse response = httpclient.execute(httpget);
+
+    return EntityUtils.toString(response.getEntity());
   }
 }
