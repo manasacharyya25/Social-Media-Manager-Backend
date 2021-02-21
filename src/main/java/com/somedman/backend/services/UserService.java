@@ -20,8 +20,7 @@ public class UserService
   private UserSettingsRepository userSettingsRepository;
 
   public int loginUser(User newUser) {
-    int userId = CustomUtils.getHashId(newUser.getEmail());
-
+    int userId = CustomUtils.getHashId(newUser.getEmail(), newUser.getProvider());
 
     if(!this.userRepository.findById(userId).isPresent()) {
       newUser.setId(userId);

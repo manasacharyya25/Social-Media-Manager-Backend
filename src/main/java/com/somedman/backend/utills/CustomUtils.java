@@ -11,9 +11,11 @@ import java.util.zip.GZIPOutputStream;
 
 public class CustomUtils
 {
-  public static int getHashId(String text)
+  public static int getHashId(String text1, String text2)
   {
     int hashCode = 0;
+    String text = text1.concat(text2);
+
     for( int i = 0; i < text.length(); i++) {
       hashCode += Character.getNumericValue(text.charAt(i))*(i+1);
     }
