@@ -1,5 +1,8 @@
 package com.somedman.backend.controller;
 
+import com.somedman.backend.entities.UrlObject;
+import com.somedman.backend.services.InMemoryCache;
+import com.somedman.backend.services.SocialService;
 import com.sun.corba.se.spi.orbutil.fsm.Input;
 import oauth.signpost.OAuthConsumer;
 import oauth.signpost.OAuthProvider;
@@ -19,6 +22,8 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
 import org.springframework.web.bind.annotation.*;
 
 import java.awt.*;
@@ -30,81 +35,34 @@ import java.util.*;
 @RestController
 @RequestMapping("social")
 @CrossOrigin(origins = "*")
+@Scope("request")
 public class SocialController
 {
-  private static HashMap<String, OAuthConsumer> cache;
-  private static OAuthConsumer consumer;
-  private static OAuthProvider provider;
+  @Autowired
+  private SocialService socialService;
 
-  SocialController() {
-    cache = new HashMap<String, OAuthConsumer>();
-
-    consumer = new CommonsHttpOAuthConsumer(
-        "olqhlNchIoMOxelBmNcIgcTjTJ4kdh7VVCNmBzMxi7HREothkJ",
-        "crF13d1aP4uc1YQSg04QmpawGazHMhEF9RMDwva0NaKWxU1IHX"
-    );
-
-    provider =  new CommonsHttpOAuthProvider(
-        "https://www.tumblr.com/oauth/request_token",
-        "https://www.tumblr.com/oauth/access_token",
-        "https://www.tumblr.com/oauth/authorize"
-    );
-  }
-
-  @GetMapping("/tumblr/initialize")
-  public String integrateTumblr() throws
+  @GetMapping("/tumblr/initialize/{userId}")
+  public UrlObject integrateTumblr(@PathVariable("userId") int userId) throws
       OAuthCommunicationException,
       OAuthExpectationFailedException,
       OAuthNotAuthorizedException,
       OAuthMessageSignerException
   {
-    String authUrl = provider.retrieveRequestToken(consumer, "http://localhost:8080/social/tumblr/authorize");
-
-    String oauthToken = authUrl.split("=")[1];
-
-    cache.put(oauthToken, consumer);
-
-    return authUrl;
+    return this.socialService.integrateTumblr(userId);
   }
 
-  @GetMapping("/tumblr/authorize")
-  public String AuthorizeTumblr(@RequestParam(name = "oauth_token") String oauthToken,
+  @GetMapping("/tumblr/authorize/{userId}")
+  public void AuthorizeTumblr(@PathVariable("userId") int userId, @RequestParam(name = "oauth_token") String oauthToken,
       @RequestParam (name = "oauth_verifier") String oauthVerifier)
-      throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException, IOException
+      throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException
   {
-    OAuthConsumer consumer = cache.get(oauthToken);
+    this.socialService.handleAuthorizeCallback(userId, oauthToken, oauthVerifier);
+  }
 
-    provider.retrieveAccessToken(consumer, oauthVerifier);
-
-    String accessToken = consumer.getToken();
-    String accessTokenSecret = consumer.getTokenSecret();
-
-    // store consumer.getToken() and consumer.getTokenSecret(),
-    // for the current user, e.g. in a relational database
-    // or a flat file
-    // ...
-
-    /****************************************************
-     * The following steps are performed everytime you
-     * send a request accessing a resource on Twitter
-     ***************************************************/
-
-    // if not yet done, load the token and token secret for
-    // the current user and set them
-    consumer.setTokenWithSecret(accessToken, accessTokenSecret);
-
-    // create a request that requires authentication
-
-    //Creating a HttpClient object
-    CloseableHttpClient httpclient = HttpClients.createDefault();
-
-    //Creating a HttpGet object
-    HttpGet httpget = new HttpGet("https://api.tumblr.com/v2/user/info");
-
-    consumer.sign(httpget);
-
-    CloseableHttpResponse response = httpclient.execute(httpget);
-
-    return EntityUtils.toString(response.getEntity());
+  @GetMapping("/tumblr/BlogsList/{userId}")
+  public String GetAllBlogsByUserId(@PathVariable("userId") int userId)
+      throws OAuthExpectationFailedException, OAuthCommunicationException, OAuthMessageSignerException, IOException
+  {
+    return this.socialService.getTumblrBlogsByUserId(userId);
   }
 }
