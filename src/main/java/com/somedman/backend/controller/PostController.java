@@ -2,11 +2,15 @@ package com.somedman.backend.controller;
 
 import com.somedman.backend.entities.Post;
 import com.somedman.backend.services.PostService;
+import oauth.signpost.exception.OAuthCommunicationException;
+import oauth.signpost.exception.OAuthExpectationFailedException;
+import oauth.signpost.exception.OAuthMessageSignerException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.List;
 
 @RestController
@@ -18,7 +22,8 @@ public class PostController
 
   @PostMapping("/publish")
   @CrossOrigin(origins = "*")
-  public int PublishPost(@RequestBody Post newPost) throws IOException
+  public int PublishPost(@RequestBody Post newPost)
+      throws IOException, OAuthCommunicationException, OAuthExpectationFailedException, OAuthMessageSignerException, URISyntaxException
   {
     return this.postsService.publishPosts(newPost);
   }

@@ -23,6 +23,11 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation group: 'oauth.signpost', name: 'signpost-core', version: '2.1.1'
 	implementation group: 'oauth.signpost', name: 'signpost-commonshttp4', version: '2.1.1'
+	implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.12.1'
+	implementation group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.12.1'
+	implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.12.1'
+	// https://mvnrepository.com/artifact/org.apache.httpcomponents/httpmime
+	implementation group: 'org.apache.httpcomponents', name: 'httpmime', version: '4.5.3'
 
 
 	compileOnly 'org.projectlombok:lombok'

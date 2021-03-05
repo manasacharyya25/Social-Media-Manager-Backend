@@ -16,6 +16,7 @@ public class UserSetting
   private boolean facebookIntegrated;
   private boolean instagramIntegrated;
   private boolean tumblrIntegrated;
+  private String tumblrBlogUuid;
   private boolean twitterIntegrated;
   private boolean redditIntegrated;
   private boolean linkedinIntegrated;
