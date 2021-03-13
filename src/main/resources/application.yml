@@ -1,5 +1,6 @@
 host-url: "http://localhost:8080"
-
+server:
+  port: 5000
 spring:
   jpa:
     generate-ddl: true
