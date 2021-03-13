@@ -33,7 +33,4 @@ public class UserController {
         UserSetting userSettings) {
         this.userService.saveUserSettings(userSettings);
     }
-
-
-
 }

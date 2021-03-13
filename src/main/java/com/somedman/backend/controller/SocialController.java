@@ -1,6 +1,7 @@
 package com.somedman.backend.controller;
 
 import com.somedman.backend.entities.Blog;
+import com.somedman.backend.entities.FbShortLivedUAT;
 import com.somedman.backend.entities.ResponseObject;
 import com.somedman.backend.services.SocialService;
 import com.somedman.backend.utills.ApplicationConstants;
@@ -26,11 +27,8 @@ public class SocialController
 
   /** TUMBLR APIs **/
   @GetMapping("/tumblr/initialize/{userId}")
-  public ResponseObject integrateTumblr(@PathVariable("userId") int userId) throws
-      OAuthCommunicationException,
-      OAuthExpectationFailedException,
-      OAuthNotAuthorizedException,
-      OAuthMessageSignerException
+  public ResponseObject integrateTumblr(@PathVariable("userId") int userId)
+      throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException, IOException
   {
     return this.socialService.integrateTumblr(userId);
   }
@@ -41,14 +39,6 @@ public class SocialController
       throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException
   {
     this.socialService.handleAuthorizeCallback(ApplicationConstants.TUMBLR, userId, oauthToken, oauthVerifier);
-  }
-
-  @GetMapping("/twitter/authorize")
-  public void AuthorizeTwitter(@RequestParam(name = "userId") int userId, @RequestParam(name = "oauth_token") String oauthToken,
-      @RequestParam (name = "oauth_verifier") String oauthVerifier)
-      throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException
-  {
-    this.socialService.handleAuthorizeCallback(ApplicationConstants.TWITTER, userId, oauthToken, oauthVerifier);
   }
 
   @GetMapping("/tumblr/BlogsList/{userId}")
@@ -67,5 +57,20 @@ public class SocialController
       OAuthMessageSignerException
   {
     return this.socialService.integrateTwitter(userId);
+  }
+
+  @GetMapping("/twitter/authorize")
+  public void AuthorizeTwitter(@RequestParam(name = "userId") int userId, @RequestParam(name = "oauth_token") String oauthToken,
+      @RequestParam (name = "oauth_verifier") String oauthVerifier)
+      throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException
+  {
+    this.socialService.handleAuthorizeCallback(ApplicationConstants.TWITTER, userId, oauthToken, oauthVerifier);
+  }
+
+  /** Facebook APIs **/
+  @PostMapping("/facebook/integrate")
+  public void IntegrateFcebook(@RequestBody FbShortLivedUAT sluat) throws IOException
+  {
+    this.socialService.integrateFacebook(sluat);
   }
 }

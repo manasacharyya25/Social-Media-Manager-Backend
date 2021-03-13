@@ -33,7 +33,12 @@ import org.apache.http.util.EntityUtils;
 import org.apache.tomcat.jni.File;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import sun.misc.BASE64Decoder;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -66,9 +71,32 @@ public class PostService
       if (userSetting.isTwitterIntegrated()) {
         PostToTwitter(post);
       }
+      if (userSetting.isFacebookIntegrated()) {
+        PostToFacebook(post, userSetting.getFacebookPageId());
+      }
     }
 
     return savedPost.getPostId();
+  }
+
+  private void PostToFacebook(Post post, String pageId) throws IOException
+  {
+    String pageLLAT = this.uatRepo.findByUserId(post.getUserId()).getFacebookAccessToken();
+
+    CloseableHttpClient httpclient = HttpClients.createDefault();
+    HttpPost httpPost = new HttpPost(String.format("https://graph.facebook.com/v9.0/%s/photos", pageId));
+
+    java.io.File outputfile = getFileFromBase64(post);
+
+    HttpEntity entity = MultipartEntityBuilder
+        .create()
+        .addBinaryBody("source", outputfile)
+        .addTextBody("caption", post.getCaption())
+        .addTextBody("access_token", pageLLAT)
+        .build();
+
+    httpPost.setEntity(entity);
+    CloseableHttpResponse response = httpclient.execute(httpPost);
   }
 
   private void PostToTwitter(Post post)
@@ -95,12 +123,6 @@ public class PostService
         .addTextBody("media_data", imageBase64EncodedString)
         .build();
 
-//    ArrayList<NameValuePair> postParameters = new ArrayList<NameValuePair>();
-//    postParameters.add(new BasicNameValuePair("media_category", "tweet_image"));
-//    postParameters.add(new BasicNameValuePair("media_data", imageBase64EncodedString));
-
-//    httpPost.setEntity(new UrlEncodedFormEntity(postParameters, "UTF-8"));
-
     httpPost.setEntity(entity);
     consumer.sign(httpPost);
 
@@ -126,7 +148,6 @@ public class PostService
 
     response = httpclient.execute(httpPost2);
 
-
   }
 
   private void PostToTumblr(Post post, String blogUuid) throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthMessageSignerException, IOException
@@ -142,7 +163,6 @@ public class PostService
 
     CloseableHttpClient httpclient = HttpClients.createDefault();
 
-    //Creating a HttpGet object
     HttpPost httpPost = new HttpPost(String.format("https://api.tumblr.com/v2/blog/%s/post", blogUuid));
 
     String imageBase64EncodedString =  post.getImage().split(",")[1];
@@ -154,15 +174,6 @@ public class PostService
         .addTextBody("data64", imageBase64EncodedString)
         .addTextBody("tags", post.getTags())
         .build();
-
-//    ArrayList<NameValuePair> postParameters = new ArrayList<NameValuePair>();
-//    postParameters.add(new BasicNameValuePair("type", "photo"));
-//    postParameters.add(new BasicNameValuePair("caption", post.getCaption()));
-//    postParameters.add(new BasicNameValuePair("data64", Base64.encodeBase64String(post.getImage().getBytes())));
-//    postParameters.add(new BasicNameValuePair("tags", post.getTags()));
-//
-//    httpPost.setEntity(new UrlEncodedFormEntity(postParameters, "UTF-8"));
-//
 
     httpPost.setEntity(entity);
     consumer.sign(httpPost);
@@ -179,5 +190,22 @@ public class PostService
       post.setImage(CustomUtils.uncompressString(post.getImageData()));
     }
     return retrievedPosts;
+  }
+
+  private java.io.File getFileFromBase64(Post post) throws IOException
+  {
+    String imageBase64EncodedString =  post.getImage().split(",")[1];
+
+    BASE64Decoder decoder = new BASE64Decoder();
+    byte[] imageByte = decoder.decodeBuffer(imageBase64EncodedString);
+    ByteArrayInputStream bis = new ByteArrayInputStream(imageByte);
+    BufferedImage image = ImageIO.read(bis);
+    bis.close();
+
+    // write the image to a file
+    java.io.File outputfile = new java.io.File("imageFile");
+
+    ImageIO.write(image, "png", outputfile);
+    return outputfile;
   }
 }

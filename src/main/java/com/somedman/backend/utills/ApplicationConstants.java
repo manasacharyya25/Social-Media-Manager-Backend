@@ -6,4 +6,5 @@ public class ApplicationConstants
   public static String HOST_URL = "http://localhost:8080";
   public static String TWITTER = "TWITTER";
   public static String TUMBLR = "TUMBLR";
+  public static String FACEBOOK = "FACEBOOK";
 }

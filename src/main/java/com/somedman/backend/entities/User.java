@@ -21,6 +21,7 @@ public class User {
     private String photoUrl;        // Will change data type to uri
     private String userId;          // Provided by Social platform. Same if logging in with email id.
     private String provider;
+    private String accessToken;     //Only Applicable for Facebook. Stores the Short Lived Access Token
 }
 
 

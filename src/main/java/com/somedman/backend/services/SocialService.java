@@ -3,10 +3,9 @@ package com.somedman.backend.services;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.somedman.backend.entities.Blog;
-import com.somedman.backend.entities.ResponseObject;
-import com.somedman.backend.entities.UserAccessTokens;
+import com.somedman.backend.entities.*;
 import com.somedman.backend.repository.UserAccessTokenRepository;
+import com.somedman.backend.repository.UserSettingsRepository;
 import com.somedman.backend.utills.ApplicationConstants;
 import oauth.signpost.OAuthConsumer;
 import oauth.signpost.OAuthProvider;
@@ -16,12 +15,16 @@ import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
 import oauth.signpost.exception.OAuthNotAuthorizedException;
+import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
 
@@ -35,12 +38,18 @@ public class SocialService
   @Autowired
   private UserAccessTokenRepository uatRepo;
 
+  @Autowired
+  private UserSettingsRepository userSettingsRepo;
+
+  @Value("${host-url}")
+  private String hostUrl;
+
   // TODO: Change to Redis Cache
   @Autowired
   private InMemoryCache cache;
 
   public ResponseObject integrateTumblr(int userId)
-      throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException
+      throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException, IOException
   {
     OAuthConsumer consumer = new CommonsHttpOAuthConsumer(
         "olqhlNchIoMOxelBmNcIgcTjTJ4kdh7VVCNmBzMxi7HREothkJ",
@@ -54,7 +63,7 @@ public class SocialService
     );
 
     String authUrl = provider.retrieveRequestToken(consumer,
-        String.format("%s/social/tumblr/authorize/%d", ApplicationConstants.HOST_URL, userId));
+        String.format("%s/social/tumblr/authorize/%d", hostUrl, userId));
 
     String oauthToken = authUrl.split("=")[1];
 
@@ -89,6 +98,8 @@ public class SocialService
         uat.setTwitterAccessToken(accessToken);
         uat.setTwitterAccessTokenSecret(accessTokenSecret);
         break;
+      case "FACEBOOK":
+          uat.setFacebookAccessToken(accessToken);
       default:
         break;
     }
@@ -127,6 +138,10 @@ public class SocialService
     for( JsonNode blog : blogsNode) {
       if (blog.get("admin").booleanValue()) {
         String blogId = blog.get("uuid").textValue();
+
+        //TODO: Remove Later
+        StoreAssociatedPageIds(ApplicationConstants.TUMBLR, userId, blogId);
+
         String blogUrl = blog.get("url").textValue();
         String blogTitle = blog.get("title").textValue();
         String blogAvatar = blog.get("avatar").get(3).get("url").textValue();
@@ -155,7 +170,7 @@ public class SocialService
 //        String.format("http://example.com", ApplicationConstants.HOST_URL, userId));
 
     String authUrl = provider.retrieveRequestToken(consumer,
-        String.format("%s/social/twitter/authorize?userId=%d", ApplicationConstants.HOST_URL, userId));
+        String.format("%s/social/twitter/authorize?userId=%d", hostUrl, userId));
 
     String oauthToken = authUrl.split("=")[1];
 
@@ -163,5 +178,55 @@ public class SocialService
     cache.oauthTokenToProviderMap.put(oauthToken, provider);
 
     return new ResponseObject(authUrl);
+  }
+
+  public void integrateFacebook(FbShortLivedUAT sluat) throws IOException
+  {
+    CloseableHttpClient httpclient = HttpClients.createDefault();
+
+    //Creating a HttpGet object
+    HttpGet getLongLivedUserAccessToken = new HttpGet(String.format("https://graph.facebook.com/v9.0/oauth/access_token?"
+        + "grant_type=fb_exchange_token&client_id=836109743840031&"
+        + "client_secret=98821c425374c1d6248b7715d4cf70c5&"
+        + "fb_exchange_token=%s", sluat.uat));
+
+    CloseableHttpResponse response = httpclient.execute(getLongLivedUserAccessToken);
+
+    String responseJson =  EntityUtils.toString(response.getEntity());
+
+    String longLivedUserAccessToken = new ObjectMapper(new JsonFactory()).readTree(responseJson).get("access_token").textValue();
+
+    HttpGet getLongLivedPageAccessToken = new HttpGet(String.format("https://graph.facebook.com/v9.0/%s/accounts?"
+        + "access_token=%s",sluat.fbUserId, longLivedUserAccessToken));
+
+    response = httpclient.execute(getLongLivedPageAccessToken);
+
+    responseJson =  EntityUtils.toString(response.getEntity());
+
+    JsonNode pageAccessTokenNode = new ObjectMapper(new JsonFactory()).readTree(responseJson).get("data").get(0);
+
+    String pageLLAT = pageAccessTokenNode.get("access_token").asText();
+    String pageId = pageAccessTokenNode.get("id").asText();
+
+    StoreAccessTokens(ApplicationConstants.FACEBOOK, sluat.userId, pageLLAT, null);
+    StoreAssociatedPageIds(ApplicationConstants.FACEBOOK, sluat.userId, pageId);
+  }
+
+  private void StoreAssociatedPageIds(String platform, int userId, String pageId)
+  {
+    UserSetting userSetting = userSettingsRepo.findByUserId(userId);
+
+    switch(platform) {
+      case "FACEBOOK":
+        userSetting.setFacebookPageId(pageId);
+        break;
+      case "TUMBLR":
+        userSetting.setTumblrBlogUuid(pageId);
+        break;
+      default:
+        break;
+    }
+
+    userSettingsRepo.save(userSetting);
   }
 }
