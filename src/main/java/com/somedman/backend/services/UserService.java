@@ -8,7 +8,6 @@ import com.somedman.backend.repository.UserRepository;
 import com.somedman.backend.repository.UserSettingsRepository;
 import com.somedman.backend.utills.ApplicationConstants;
 import com.somedman.backend.utills.CustomUtils;
-import javafx.application.Application;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
