@@ -1,4 +1,4 @@
-host-url: "http://localhost:8080"
+host-url: "https://somedman.herokuapp.com"
 server:
   port: ${PORT:8080}
 spring:
