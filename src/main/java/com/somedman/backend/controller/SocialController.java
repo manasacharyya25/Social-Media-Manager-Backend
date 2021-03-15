@@ -36,17 +36,17 @@ public class SocialController
   @GetMapping("/tumblr/authorize/{userId}")
   public void AuthorizeTumblr(@PathVariable("userId") int userId, @RequestParam(name = "oauth_token") String oauthToken,
       @RequestParam (name = "oauth_verifier") String oauthVerifier)
-      throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException
+      throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException, IOException
   {
     this.socialService.handleAuthorizeCallback(ApplicationConstants.TUMBLR, userId, oauthToken, oauthVerifier);
   }
 
-  @GetMapping("/tumblr/BlogsList/{userId}")
-  public ResponseObject GetAllBlogsByUserId(@PathVariable("userId") int userId)
-      throws OAuthExpectationFailedException, OAuthCommunicationException, OAuthMessageSignerException, IOException
-  {
-    return this.socialService.getTumblrBlogsByUserId(userId);
-  }
+//  @GetMapping("/tumblr/BlogsList/{userId}")
+//  public ResponseObject GetAllBlogsByUserId(@PathVariable("userId") int userId)
+//      throws OAuthExpectationFailedException, OAuthCommunicationException, OAuthMessageSignerException, IOException
+//  {
+//    return this.socialService.getTumblrBlogsByUserId(userId);
+//  }
 
   /** Twitter APIs  **/
   @GetMapping("/twitter/initialize/{userId}")
@@ -62,14 +62,15 @@ public class SocialController
   @GetMapping("/twitter/authorize")
   public void AuthorizeTwitter(@RequestParam(name = "userId") int userId, @RequestParam(name = "oauth_token") String oauthToken,
       @RequestParam (name = "oauth_verifier") String oauthVerifier)
-      throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException
+      throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException, IOException
   {
     this.socialService.handleAuthorizeCallback(ApplicationConstants.TWITTER, userId, oauthToken, oauthVerifier);
   }
 
   /** Facebook APIs **/
   @PostMapping("/facebook/integrate")
-  public void IntegrateFcebook(@RequestBody FbShortLivedUAT sluat) throws IOException
+  public void IntegrateFcebook(@RequestBody FbShortLivedUAT sluat)
+      throws IOException, OAuthCommunicationException, OAuthExpectationFailedException, OAuthMessageSignerException
   {
     this.socialService.integrateFacebook(sluat);
   }

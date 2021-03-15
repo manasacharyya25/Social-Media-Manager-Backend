@@ -66,22 +66,24 @@ public class PostService
 
     if (userSetting != null) {
       if (userSetting.isTumblrIntegrated()) {
-        PostToTumblr(post, userSetting.getTumblrBlogUuid());
+        PostToTumblr(post);
       }
       if (userSetting.isTwitterIntegrated()) {
         PostToTwitter(post);
       }
       if (userSetting.isFacebookIntegrated()) {
-        PostToFacebook(post, userSetting.getFacebookPageId());
+        PostToFacebook(post);
       }
     }
 
     return savedPost.getPostId();
   }
 
-  private void PostToFacebook(Post post, String pageId) throws IOException
+  private void PostToFacebook(Post post) throws IOException
   {
-    String pageLLAT = this.uatRepo.findByUserId(post.getUserId()).getFacebookAccessToken();
+    UserAccessTokens uat = this.uatRepo.findByUserId(post.getUserId());
+    String pageLLAT = uat.getFacebookAccessToken();
+    String pageId = uat.getFacebookPageId();
 
     CloseableHttpClient httpclient = HttpClients.createDefault();
     HttpPost httpPost = new HttpPost(String.format("https://graph.facebook.com/v9.0/%s/photos", pageId));
@@ -150,7 +152,7 @@ public class PostService
 
   }
 
-  private void PostToTumblr(Post post, String blogUuid) throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthMessageSignerException, IOException
+  private void PostToTumblr(Post post) throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthMessageSignerException, IOException
   {
     OAuthConsumer consumer = new CommonsHttpOAuthConsumer(
         "olqhlNchIoMOxelBmNcIgcTjTJ4kdh7VVCNmBzMxi7HREothkJ",
@@ -158,6 +160,8 @@ public class PostService
     );
 
     UserAccessTokens uat = this.uatRepo.findByUserId(post.getUserId());
+
+    String blogUuid = uat.getTumblrPageId();
 
     consumer.setTokenWithSecret(uat.getTumblrAccessToken(), uat.getTumblrAccessTokenSecret());
 

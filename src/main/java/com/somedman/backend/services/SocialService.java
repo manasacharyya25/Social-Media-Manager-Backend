@@ -15,11 +15,8 @@ import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
 import oauth.signpost.exception.OAuthNotAuthorizedException;
-import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
@@ -74,7 +71,7 @@ public class SocialService
   }
 
   public void handleAuthorizeCallback(String platform, int userId, String oauthToken, String oauthVerifier)
-      throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException
+      throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException, IOException
   {
     OAuthConsumer consumer = cache.oauthTokenToConsumerMap.get(oauthToken);
     OAuthProvider provider = cache.oauthTokenToProviderMap.get(oauthToken);
@@ -85,6 +82,7 @@ public class SocialService
   }
 
   private void StoreAccessTokens(String platform, int userId, String accessToken, String accessTokenSecret)
+      throws OAuthExpectationFailedException, OAuthCommunicationException, OAuthMessageSignerException, IOException
   {
     //TODO: Create UAT Object for each new user signed in
     UserAccessTokens uat = this.uatRepo.findByUserId(userId);
@@ -93,6 +91,7 @@ public class SocialService
       case "TUMBLR":
         uat.setTumblrAccessToken(accessToken);
         uat.setTumblrAccessTokenSecret(accessTokenSecret);
+        uat.setTumblrPageId(getTumblrBlogsByUserId(userId, accessToken, accessTokenSecret));
         break;
       case "TWITTER":
         uat.setTwitterAccessToken(accessToken);
@@ -100,6 +99,7 @@ public class SocialService
         break;
       case "FACEBOOK":
           uat.setFacebookAccessToken(accessToken);
+          uat.setFacebookPageId(accessTokenSecret);
       default:
         break;
     }
@@ -107,17 +107,13 @@ public class SocialService
     this.uatRepo.save(uat);
   }
 
-  public ResponseObject getTumblrBlogsByUserId(int userId)
-      throws IOException, OAuthCommunicationException, OAuthExpectationFailedException, OAuthMessageSignerException
+  public String getTumblrBlogsByUserId(int userId, String accessToken, String accessTokenSecret)
+      throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthMessageSignerException, IOException
   {
-    OAuthConsumer consumer = new CommonsHttpOAuthConsumer(
-        "olqhlNchIoMOxelBmNcIgcTjTJ4kdh7VVCNmBzMxi7HREothkJ",
-        "crF13d1aP4uc1YQSg04QmpawGazHMhEF9RMDwva0NaKWxU1IHX"
-    );
+    OAuthConsumer consumer =
+        new CommonsHttpOAuthConsumer("olqhlNchIoMOxelBmNcIgcTjTJ4kdh7VVCNmBzMxi7HREothkJ", "crF13d1aP4uc1YQSg04QmpawGazHMhEF9RMDwva0NaKWxU1IHX");
 
-    UserAccessTokens uat = this.uatRepo.findByUserId(userId);
-
-    consumer.setTokenWithSecret(uat.getTumblrAccessToken(), uat.getTumblrAccessTokenSecret());
+    consumer.setTokenWithSecret(accessToken, accessTokenSecret);
 
     CloseableHttpClient httpclient = HttpClients.createDefault();
 
@@ -128,29 +124,67 @@ public class SocialService
 
     CloseableHttpResponse response = httpclient.execute(httpget);
 
-    String responseJson =  EntityUtils.toString(response.getEntity());
+    String responseJson = EntityUtils.toString(response.getEntity());
 
     JsonNode blogsNode = new ObjectMapper(new JsonFactory()).readTree(responseJson).get("response").get("user").get("blogs");
 
     ArrayList<Blog> blogs = new ArrayList<Blog>();
 
-
-    for( JsonNode blog : blogsNode) {
-      if (blog.get("admin").booleanValue()) {
+    for (JsonNode blog : blogsNode)
+    {
+      if (blog.get("admin").booleanValue())
+      {
         String blogId = blog.get("uuid").textValue();
-
-        //TODO: Remove Later
-        StoreAssociatedPageIds(ApplicationConstants.TUMBLR, userId, blogId);
-
-        String blogUrl = blog.get("url").textValue();
-        String blogTitle = blog.get("title").textValue();
-        String blogAvatar = blog.get("avatar").get(3).get("url").textValue();
-
-        blogs.add(Blog.builder().BlogId(blogId).BlogUrl(blogUrl).BlogName(blogTitle).BlogImageUrl(blogAvatar).build());
+        return blogId;
       }
     }
-    return new ResponseObject(blogs);
+    return null;
   }
+
+//  public ResponseObject getTumblrBlogsByUserId(int userId)
+//      throws IOException, OAuthCommunicationException, OAuthExpectationFailedException, OAuthMessageSignerException
+//  {
+//    OAuthConsumer consumer = new CommonsHttpOAuthConsumer(
+//        "olqhlNchIoMOxelBmNcIgcTjTJ4kdh7VVCNmBzMxi7HREothkJ",
+//        "crF13d1aP4uc1YQSg04QmpawGazHMhEF9RMDwva0NaKWxU1IHX"
+//    );
+//
+//    UserAccessTokens uat = this.uatRepo.findByUserId(userId);
+//
+//    consumer.setTokenWithSecret(uat.getTumblrAccessToken(), uat.getTumblrAccessTokenSecret());
+//
+//    CloseableHttpClient httpclient = HttpClients.createDefault();
+//
+//    //Creating a HttpGet object
+//    HttpGet httpget = new HttpGet("https://api.tumblr.com/v2/user/info");
+//
+//    consumer.sign(httpget);
+//
+//    CloseableHttpResponse response = httpclient.execute(httpget);
+//
+//    String responseJson =  EntityUtils.toString(response.getEntity());
+//
+//    JsonNode blogsNode = new ObjectMapper(new JsonFactory()).readTree(responseJson).get("response").get("user").get("blogs");
+//
+//    ArrayList<Blog> blogs = new ArrayList<Blog>();
+//
+//
+//    for( JsonNode blog : blogsNode) {
+//      if (blog.get("admin").booleanValue()) {
+//        String blogId = blog.get("uuid").textValue();
+//
+//        //TODO: Remove Later
+//        StoreAssociatedPageIds(ApplicationConstants.TUMBLR, userId, blogId);
+//
+//        String blogUrl = blog.get("url").textValue();
+//        String blogTitle = blog.get("title").textValue();
+//        String blogAvatar = blog.get("avatar").get(3).get("url").textValue();
+//
+//        blogs.add(Blog.builder().BlogId(blogId).BlogUrl(blogUrl).BlogName(blogTitle).BlogImageUrl(blogAvatar).build());
+//      }
+//    }
+//    return new ResponseObject(blogs);
+//  }
 
   public ResponseObject integrateTwitter(int userId)
       throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException
@@ -180,7 +214,8 @@ public class SocialService
     return new ResponseObject(authUrl);
   }
 
-  public void integrateFacebook(FbShortLivedUAT sluat) throws IOException
+  public void integrateFacebook(FbShortLivedUAT sluat)
+      throws IOException, OAuthCommunicationException, OAuthExpectationFailedException, OAuthMessageSignerException
   {
     CloseableHttpClient httpclient = HttpClients.createDefault();
 
@@ -208,25 +243,8 @@ public class SocialService
     String pageLLAT = pageAccessTokenNode.get("access_token").asText();
     String pageId = pageAccessTokenNode.get("id").asText();
 
-    StoreAccessTokens(ApplicationConstants.FACEBOOK, sluat.userId, pageLLAT, null);
-    StoreAssociatedPageIds(ApplicationConstants.FACEBOOK, sluat.userId, pageId);
-  }
-
-  private void StoreAssociatedPageIds(String platform, int userId, String pageId)
-  {
-    UserSetting userSetting = userSettingsRepo.findByUserId(userId);
-
-    switch(platform) {
-      case "FACEBOOK":
-        userSetting.setFacebookPageId(pageId);
-        break;
-      case "TUMBLR":
-        userSetting.setTumblrBlogUuid(pageId);
-        break;
-      default:
-        break;
-    }
-
-    userSettingsRepo.save(userSetting);
+    //NOTE: Access Token Secret Doesnot Exist for Facebook. Parameter is used ot pass pageId
+    StoreAccessTokens(ApplicationConstants.FACEBOOK, sluat.userId, pageLLAT, pageId);
+//    StoreAssociatedPageIds(ApplicationConstants.FACEBOOK, sluat.userId, pageId);
   }
 }

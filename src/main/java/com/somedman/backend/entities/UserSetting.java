@@ -14,10 +14,8 @@ public class UserSetting
   @Id
   private int userId;
   private boolean facebookIntegrated;
-  private String facebookPageId;
   private boolean instagramIntegrated;
   private boolean tumblrIntegrated;
-  private String tumblrBlogUuid;
   private boolean twitterIntegrated;
   private boolean redditIntegrated;
   private boolean linkedinIntegrated;

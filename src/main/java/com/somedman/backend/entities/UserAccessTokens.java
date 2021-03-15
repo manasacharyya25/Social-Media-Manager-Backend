@@ -14,9 +14,11 @@ public class UserAccessTokens
   @Id
   private int userId;
   private String facebookAccessToken;
+  private String facebookPageId;
   private String instagramAccessToken;
   private String tumblrAccessToken;
   private String tumblrAccessTokenSecret;
+  private String tumblrPageId;
   private String twitterAccessToken;
   private String twitterAccessTokenSecret;
   private String linkedinAccessToken;
