@@ -11,12 +11,15 @@ import oauth.signpost.exception.OAuthMessageSignerException;
 import oauth.signpost.exception.OAuthNotAuthorizedException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.*;
 
 @RestController
+@Controller
 @RequestMapping("social")
 @CrossOrigin(origins = "*")
 @Scope("request")
@@ -33,12 +36,22 @@ public class SocialController
     return this.socialService.integrateTumblr(userId);
   }
 
-  @GetMapping("/tumblr/authorize/{userId}")
-  public void AuthorizeTumblr(@PathVariable("userId") int userId, @RequestParam(name = "oauth_token") String oauthToken,
+  @GetMapping(value = "/tumblr/authorize/{userId}", produces = MediaType.TEXT_HTML_VALUE)
+  @ResponseBody
+  public String AuthorizeTumblr(@PathVariable("userId") int userId, @RequestParam(name = "oauth_token") String oauthToken,
       @RequestParam (name = "oauth_verifier") String oauthVerifier)
       throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException, IOException
   {
     this.socialService.handleAuthorizeCallback(ApplicationConstants.TUMBLR, userId, oauthToken, oauthVerifier);
+    return "<html>\n" +
+              "<head>\n" +
+              "    <script>\n" +
+              "        window.close();\n" +
+              "    </script>\n" +
+              "</head>\n" +
+              "<body>\n" +
+              "</body>\n" +
+           "</html>";
   }
 
 //  @GetMapping("/tumblr/BlogsList/{userId}")
