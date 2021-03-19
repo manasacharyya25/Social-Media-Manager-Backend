@@ -6,42 +6,34 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.somedman.backend.entities.Post;
 import com.somedman.backend.entities.UserAccessTokens;
 import com.somedman.backend.entities.UserSetting;
+import com.somedman.backend.entities.WebResponse;
 import com.somedman.backend.repository.PostsRepository;
 import com.somedman.backend.repository.UserAccessTokenRepository;
 import com.somedman.backend.repository.UserSettingsRepository;
+import com.somedman.backend.utills.ApplicationConstants;
 import com.somedman.backend.utills.CustomUtils;
-import lombok.var;
 import oauth.signpost.OAuthConsumer;
 import oauth.signpost.commonshttp.CommonsHttpOAuthConsumer;
 import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.http.HttpEntity;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
-import org.apache.tomcat.jni.File;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import sun.misc.BASE64Decoder;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -54,136 +46,167 @@ public class PostService
   @Autowired
   private UserAccessTokenRepository uatRepo;
 
-  public int publishPosts(Post post)
+  public WebResponse publishPosts(Post post)
       throws IOException, OAuthCommunicationException, OAuthExpectationFailedException, OAuthMessageSignerException, URISyntaxException
   {
-    int userId = post.getUserId();
+    try
+    {
+      StringBuilder response = new StringBuilder();
+      int userId = post.getUserId();
 
-    post.setImageData(CustomUtils.compressString(post.getImage()));
-    Post savedPost = this.postsRepository.save(post);
 
-    UserSetting userSetting = userSettingsRepository.findByUserId(userId);
+      //    post.setImageData(CustomUtils.compressString(post.getImage()));
+      //    Post savedPost = this.postsRepository.save(post);
+      //      return savedPost.getPostId();
 
-    if (userSetting != null) {
-      if (userSetting.isTumblrIntegrated()) {
-        PostToTumblr(post);
+      UserSetting userSetting = userSettingsRepository.findByUserId(userId);
+
+      if (userSetting != null)
+      {
+        if (userSetting.isTumblrIntegrated())
+        {
+          response.append(PostToTumblr(post));
+        }
+        if (userSetting.isTwitterIntegrated())
+        {
+          response.append(PostToTwitter(post));
+        }
+        if (userSetting.isFacebookIntegrated())
+        {
+          response.append(PostToFacebook(post));
+        }
       }
-      if (userSetting.isTwitterIntegrated()) {
-        PostToTwitter(post);
-      }
-      if (userSetting.isFacebookIntegrated()) {
-        PostToFacebook(post);
-      }
+      return WebResponse.builder()
+          .responseCode(ApplicationConstants.SUCCESS_RESPONSE)
+          .responseMessage(response.toString())
+          .responseDetails(ApplicationConstants.POST_REQUEST)
+          .build();
+    } catch (Exception ex) {
+      return WebResponse.builder()
+          .responseCode(ApplicationConstants.FAILURE_RESPONSE)
+          .responseMessage(ex.getMessage())
+          .responseDetails(ApplicationConstants.POST_REQUEST)
+          .build();
     }
 
-    return savedPost.getPostId();
   }
 
-  private void PostToFacebook(Post post) throws IOException
+  private String PostToFacebook(Post post) throws IOException
   {
-    UserAccessTokens uat = this.uatRepo.findByUserId(post.getUserId());
-    String pageLLAT = uat.getFacebookAccessToken();
-    String pageId = uat.getFacebookPageId();
+    try {
+      UserAccessTokens uat = this.uatRepo.findByUserId(post.getUserId());
+      String pageLLAT = uat.getFacebookAccessToken();
+      String pageId = uat.getFacebookPageId();
 
-    CloseableHttpClient httpclient = HttpClients.createDefault();
-    HttpPost httpPost = new HttpPost(String.format("https://graph.facebook.com/v9.0/%s/photos", pageId));
+      CloseableHttpClient httpclient = HttpClients.createDefault();
+      HttpPost httpPost = new HttpPost(String.format("https://graph.facebook.com/v9.0/%s/photos", pageId));
 
-    java.io.File outputfile = getFileFromBase64(post);
+      java.io.File outputfile = getFileFromBase64(post);
 
-    HttpEntity entity = MultipartEntityBuilder
-        .create()
-        .addBinaryBody("source", outputfile)
-        .addTextBody("caption", post.getCaption())
-        .addTextBody("access_token", pageLLAT)
-        .build();
+      HttpEntity entity = MultipartEntityBuilder
+          .create()
+          .addBinaryBody("source", outputfile)
+          .addTextBody("caption", post.getCaption())
+          .addTextBody("access_token", pageLLAT)
+          .build();
 
-    httpPost.setEntity(entity);
-    CloseableHttpResponse response = httpclient.execute(httpPost);
+      httpPost.setEntity(entity);
+      httpclient.execute(httpPost);
+
+      return ApplicationConstants.FACEBOOK+" ";
+    } catch (Exception ex) { return ""; }
   }
 
-  private void PostToTwitter(Post post)
+  private String PostToTwitter(Post post)
       throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthMessageSignerException, IOException, URISyntaxException
   {
-    OAuthConsumer consumer = new CommonsHttpOAuthConsumer(
-        "gmV1QfUPuoy5g9bwmlfj4muur",
-        "hAvPcBqijFKMqbWaaQGeypyOEWQkcrLsgCdubJNE2zwCY2hoju"
-    );
+    try {
+      OAuthConsumer consumer = new CommonsHttpOAuthConsumer(
+          "gmV1QfUPuoy5g9bwmlfj4muur",
+          "hAvPcBqijFKMqbWaaQGeypyOEWQkcrLsgCdubJNE2zwCY2hoju"
+      );
 
-    UserAccessTokens uat = this.uatRepo.findByUserId(post.getUserId());
+      UserAccessTokens uat = this.uatRepo.findByUserId(post.getUserId());
 
-    consumer.setTokenWithSecret(uat.getTwitterAccessToken(), uat.getTwitterAccessTokenSecret());
+      consumer.setTokenWithSecret(uat.getTwitterAccessToken(), uat.getTwitterAccessTokenSecret());
 
-    CloseableHttpClient httpclient = HttpClients.createDefault();
+      CloseableHttpClient httpclient = HttpClients.createDefault();
 
-    HttpPost httpPost = new HttpPost("https://upload.twitter.com/1.1/media/upload.json");
+      HttpPost httpPost = new HttpPost("https://upload.twitter.com/1.1/media/upload.json");
 
-    String imageBase64EncodedString =  post.getImage().split(",")[1];
+      String imageBase64EncodedString =  post.getImage().split(",")[1];
 
-    HttpEntity entity = MultipartEntityBuilder
-        .create()
-        .addTextBody("media_category", "tweet_image")
-        .addTextBody("media_data", imageBase64EncodedString)
-        .build();
+      HttpEntity entity = MultipartEntityBuilder
+          .create()
+          .addTextBody("media_category", "tweet_image")
+          .addTextBody("media_data", imageBase64EncodedString)
+          .build();
 
-    httpPost.setEntity(entity);
-    consumer.sign(httpPost);
+      httpPost.setEntity(entity);
+      consumer.sign(httpPost);
 
-    CloseableHttpResponse response = httpclient.execute(httpPost);
+      CloseableHttpResponse response = httpclient.execute(httpPost);
 
-    String responseJson =  EntityUtils.toString(response.getEntity());
+      String responseJson =  EntityUtils.toString(response.getEntity());
 
-    JsonNode blogsNode = new ObjectMapper(new JsonFactory()).readTree(responseJson).get("media_id");
+      JsonNode blogsNode = new ObjectMapper(new JsonFactory()).readTree(responseJson).get("media_id");
 
-    URIBuilder builder = new URIBuilder("https://api.twitter.com/1.1/statuses/update.json");
-    builder.setParameter("media_ids", blogsNode.asText()).setParameter("status", post.getCaption());
+      URIBuilder builder = new URIBuilder("https://api.twitter.com/1.1/statuses/update.json");
+      builder.setParameter("media_ids", blogsNode.asText()).setParameter("status", post.getCaption());
 
-    HttpPost httpPost2 = new HttpPost(builder.build());
+      HttpPost httpPost2 = new HttpPost(builder.build());
 
-    HttpEntity entity2 = MultipartEntityBuilder
-        .create()
-        .addTextBody("media_ids", blogsNode.asText())
-        .addTextBody("status", post.getCaption())
-        .build();
+      HttpEntity entity2 = MultipartEntityBuilder
+          .create()
+          .addTextBody("media_ids", blogsNode.asText())
+          .addTextBody("status", post.getCaption())
+          .build();
 
-    httpPost2.setEntity(entity2);
-    consumer.sign(httpPost2);
+      httpPost2.setEntity(entity2);
+      consumer.sign(httpPost2);
 
-    response = httpclient.execute(httpPost2);
+      httpclient.execute(httpPost2);
 
+      return ApplicationConstants.TWITTER=" ";
+    } catch (Exception ex) { return ""; }
   }
 
-  private void PostToTumblr(Post post) throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthMessageSignerException, IOException
+  private String PostToTumblr(Post post) throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthMessageSignerException, IOException
   {
-    OAuthConsumer consumer = new CommonsHttpOAuthConsumer(
-        "olqhlNchIoMOxelBmNcIgcTjTJ4kdh7VVCNmBzMxi7HREothkJ",
-        "crF13d1aP4uc1YQSg04QmpawGazHMhEF9RMDwva0NaKWxU1IHX"
-    );
+    try {
+      OAuthConsumer consumer = new CommonsHttpOAuthConsumer(
+          "olqhlNchIoMOxelBmNcIgcTjTJ4kdh7VVCNmBzMxi7HREothkJ",
+          "crF13d1aP4uc1YQSg04QmpawGazHMhEF9RMDwva0NaKWxU1IHX"
+      );
 
-    UserAccessTokens uat = this.uatRepo.findByUserId(post.getUserId());
+      UserAccessTokens uat = this.uatRepo.findByUserId(post.getUserId());
 
-    String blogUuid = uat.getTumblrPageId();
+      String blogUuid = uat.getTumblrPageId();
 
-    consumer.setTokenWithSecret(uat.getTumblrAccessToken(), uat.getTumblrAccessTokenSecret());
+      consumer.setTokenWithSecret(uat.getTumblrAccessToken(), uat.getTumblrAccessTokenSecret());
 
-    CloseableHttpClient httpclient = HttpClients.createDefault();
+      CloseableHttpClient httpclient = HttpClients.createDefault();
 
-    HttpPost httpPost = new HttpPost(String.format("https://api.tumblr.com/v2/blog/%s/post", blogUuid));
+      HttpPost httpPost = new HttpPost(String.format("https://api.tumblr.com/v2/blog/%s/post", blogUuid));
 
-    String imageBase64EncodedString =  post.getImage().split(",")[1];
+      String imageBase64EncodedString =  post.getImage().split(",")[1];
 
-    HttpEntity entity = MultipartEntityBuilder
-        .create()
-        .addTextBody("type", "photo")
-        .addTextBody("caption", post.getCaption())
-        .addTextBody("data64", imageBase64EncodedString)
-        .addTextBody("tags", post.getTags())
-        .build();
+      HttpEntity entity = MultipartEntityBuilder
+          .create()
+          .addTextBody("type", "photo")
+          .addTextBody("caption", post.getCaption())
+          .addTextBody("data64", imageBase64EncodedString)
+          .addTextBody("tags", post.getTags())
+          .build();
 
-    httpPost.setEntity(entity);
-    consumer.sign(httpPost);
+      httpPost.setEntity(entity);
+      consumer.sign(httpPost);
 
+      httpclient.execute(httpPost);
 
-    CloseableHttpResponse response = httpclient.execute(httpPost);
+      return ApplicationConstants.TUMBLR+" ";
+
+    } catch(Exception ex) { return ""; }
   }
 
   public List<Post> getPostsByUser(int userId) throws IOException

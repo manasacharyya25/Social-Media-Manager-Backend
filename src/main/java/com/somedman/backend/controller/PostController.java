@@ -1,6 +1,7 @@
 package com.somedman.backend.controller;
 
 import com.somedman.backend.entities.Post;
+import com.somedman.backend.entities.WebResponse;
 import com.somedman.backend.services.PostService;
 import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
@@ -22,7 +23,7 @@ public class PostController
 
   @PostMapping("/publish")
   @CrossOrigin(origins = "*")
-  public int PublishPost(@RequestBody Post newPost)
+  public WebResponse PublishPost(@RequestBody Post newPost)
       throws IOException, OAuthCommunicationException, OAuthExpectationFailedException, OAuthMessageSignerException, URISyntaxException
   {
     return this.postsService.publishPosts(newPost);
