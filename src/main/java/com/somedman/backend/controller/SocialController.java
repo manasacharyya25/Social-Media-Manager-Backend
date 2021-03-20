@@ -64,7 +64,7 @@ public class SocialController
     return this.socialService.integrateTwitter(userId);
   }
 
-  @GetMapping(value = "/twitter/authorize/{userId}", produces = MediaType.TEXT_HTML_VALUE, params = "oauth_token")
+  @GetMapping(value = "/twitter/authorize", produces = MediaType.TEXT_HTML_VALUE, params = "oauth_token")
   @ResponseBody
   public String AuthorizeTwitter(@RequestParam(name = "userId") int userId, @RequestParam(name = "oauth_token") String oauthToken,
       @RequestParam (name = "oauth_verifier") String oauthVerifier)
@@ -73,9 +73,9 @@ public class SocialController
     return this.socialService.handleAuthorizeCallback(ApplicationConstants.TWITTER, userId, oauthToken, oauthVerifier);
   }
 
-  @GetMapping(value = "/twitter/authorize/{userId}", produces = MediaType.TEXT_HTML_VALUE)
+  @GetMapping(value = "/twitter/authorize", produces = MediaType.TEXT_HTML_VALUE, params = "denied")
   @ResponseBody
-  public String DonotAuthorizeTwitter(@PathVariable("userId") int userId)
+  public String DonotAuthorizeTwitter(@RequestParam("userId") int userId, @RequestParam("denied") String deniedId)
       throws OAuthCommunicationException, OAuthExpectationFailedException, OAuthNotAuthorizedException, OAuthMessageSignerException, IOException
   {
     return String.format(ApplicationConstants.DONOT_AUTHORIZE_HTML_RESPONSE, ApplicationConstants.TWITTER, ApplicationConstants.FAILURE_RESPONSE);
