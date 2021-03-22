@@ -103,10 +103,19 @@ public class PostService
 
       java.io.File outputfile = getFileFromBase64(post);
 
+      String postText = String.format("%s\n"
+          + ".\n"
+          + ".\n"
+          + ".\n"
+          + ".\n"
+          + ".\n"
+          + "%s\n"
+          + "%s",post.getCaption(), getEmptyStringIfNull(post.getContent()), getTags(post.getTags()));
+
       HttpEntity entity = MultipartEntityBuilder
           .create()
           .addBinaryBody("source", outputfile)
-          .addTextBody("caption", post.getCaption())
+          .addTextBody("caption", postText)
           .addTextBody("access_token", pageLLAT)
           .build();
 
@@ -151,23 +160,27 @@ public class PostService
 
       JsonNode blogsNode = new ObjectMapper(new JsonFactory()).readTree(responseJson).get("media_id");
 
+      String postText = String.format("%s\n"
+              + ".\n"
+              + ".\n"
+              + ".\n"
+              + ".\n"
+              + ".\n"
+              + "%s\n"
+              + "%s", post.getCaption(), getEmptyStringIfNull(post.getContent()), getTags(post.getTags()));
+
       URIBuilder builder = new URIBuilder("https://api.twitter.com/1.1/statuses/update.json");
-      builder.setParameter("media_ids", blogsNode.asText()).setParameter("status", post.getCaption());
+      builder.setParameter("media_ids", blogsNode.asText()).setParameter("status", postText);
 
       HttpPost httpPost2 = new HttpPost(builder.build());
 
-      HttpEntity entity2 = MultipartEntityBuilder
-          .create()
-          .addTextBody("media_ids", blogsNode.asText())
-          .addTextBody("status", post.getCaption())
-          .build();
 
-      httpPost2.setEntity(entity2);
+
       consumer.sign(httpPost2);
 
       httpclient.execute(httpPost2);
 
-      return ApplicationConstants.TWITTER=" ";
+      return ApplicationConstants.TWITTER+" ";
     } catch (Exception ex) { return ""; }
   }
 
@@ -191,12 +204,16 @@ public class PostService
 
       String imageBase64EncodedString =  post.getImage().split(",")[1];
 
+      String postText = String.format("<h1>%s</h1>"
+          + "<br />"
+          + "<i>%s</i>",post.getCaption(), getEmptyStringIfNull(post.getContent()));
+
       HttpEntity entity = MultipartEntityBuilder
           .create()
           .addTextBody("type", "photo")
-          .addTextBody("caption", post.getCaption())
+          .addTextBody("caption", postText)
           .addTextBody("data64", imageBase64EncodedString)
-          .addTextBody("tags", post.getTags())
+          .addTextBody("tags", getTumblrTags(post.getTags()))
           .build();
 
       httpPost.setEntity(entity);
@@ -207,6 +224,14 @@ public class PostService
       return ApplicationConstants.TUMBLR+" ";
 
     } catch(Exception ex) { return ""; }
+  }
+
+  private String getTumblrTags(String tags)
+  {
+    if (tags == null)
+      return "";
+
+    return tags.replace("#","").trim().replace(" ",",");
   }
 
   public List<Post> getPostsByUser(int userId) throws IOException
@@ -234,5 +259,17 @@ public class PostService
 
     ImageIO.write(image, "png", outputfile);
     return outputfile;
+  }
+
+  private String getEmptyStringIfNull(String content)
+  {
+    return content == null ? "" : content;
+  }
+
+  private String getTags(String tags) {
+    if (tags==null)
+      return "";
+
+    return "#".concat(tags.replace("#", "").trim().replace(" ", " #"));
   }
 }
