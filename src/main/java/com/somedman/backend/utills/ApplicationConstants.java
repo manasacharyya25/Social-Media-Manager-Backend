@@ -31,4 +31,5 @@ public class ApplicationConstants
   public static String FAILURE_RESPONSE = "FAILURE";
   public static String CALLBACK_URL = "CALLBACK_URL";
   public static String POST_REQUEST = "POST_REQUEST";
+  public static String POSTGRES_DRIVER = "org.postgresql.Driver";
 }

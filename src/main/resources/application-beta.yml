@@ -1,0 +1,16 @@
+host-url: "https://somedman.herokuapp.com"
+server:
+  port: ${PORT:8080}
+spring:
+  jpa:
+    generate-ddl: true
+    hibernate:
+      ddl-auto: update
+      dialect: org.hibernate.dialect.PostgreSQL94Dialect
+  datasource:
+    url: "jdbc:postgresql://ec2-52-7-115-250.compute-1.amazonaws.com:5432/df0b5qq13nobgt"
+    username: lyznlnrrdwuqnv
+    password: 5fe2dcaed4e324aa4187d48f0a9f5de84e71874ca3795ba0262f28f1c3db7070
+db:
+  poolSize: 20
+  idleTimeout: 10000
