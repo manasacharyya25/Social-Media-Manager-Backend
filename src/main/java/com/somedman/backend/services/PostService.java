@@ -27,7 +27,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import sun.misc.BASE64Decoder;
+import java.util.Base64;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -248,8 +248,7 @@ public class PostService
   {
     String imageBase64EncodedString =  post.getImage().split(",")[1];
 
-    BASE64Decoder decoder = new BASE64Decoder();
-    byte[] imageByte = decoder.decodeBuffer(imageBase64EncodedString);
+    byte[] imageByte = Base64.getDecoder().decode(imageBase64EncodedString);
     ByteArrayInputStream bis = new ByteArrayInputStream(imageByte);
     BufferedImage image = ImageIO.read(bis);
     bis.close();
